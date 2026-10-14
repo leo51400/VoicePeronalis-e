@@ -6,4 +6,6 @@ services:
     envVars:
       - key: PORT
         value: 3000
+      - key: PATH
+        value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     startCommand: node server.js
