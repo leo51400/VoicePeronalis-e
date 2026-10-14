@@ -107,7 +107,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
-        webSessions.delete(socket.id);
+        voiceSessions.delete(socket.id);
         broadcastAllPlayers();
     });
 });
