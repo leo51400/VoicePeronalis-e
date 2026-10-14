@@ -140,6 +140,8 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
+        const RTC_CONFIG = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
+        const remotePlayers = new Map();
         let localStream = null;
         let isConnected = false;
         let isMicOn = false;
@@ -154,6 +156,40 @@
             setTimeout(() => notif.remove(), 3000);
         }
 
+        function createPeerConnection(targetUsername) {
+            if (remotePlayers.has(targetUsername)) return remotePlayers.get(targetUsername);
+            const pc = new RTCPeerConnection(RTC_CONFIG);
+            const audioEl = new Audio();
+            audioEl.autoplay = true;
+            const entry = { pc, audioEl, audioCtx: null, gainNode: null };
+            if (localStream) localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+            pc.onicecandidate = e => { if (e.candidate) socket.emit('webrtc:signal', { target: targetUsername, candidate: e.candidate }); };
+            pc.ontrack = e => {
+                audioEl.srcObject = e.streams[0];
+                audioEl.play().catch(() => {});
+                if (!entry.audioCtx) {
+                    entry.audioCtx = new AudioContext();
+                    entry.gainNode = entry.audioCtx.createGain();
+                    entry.gainNode.connect(entry.audioCtx.destination);
+                    const src = entry.audioCtx.createMediaStreamSource(e.streams[0]);
+                    src.connect(entry.gainNode);
+                }
+            };
+            remotePlayers.set(targetUsername, entry);
+            return entry;
+        }
+
+        function establishConnections() {
+            onlinePlayers.filter(p => p.username !== username && p.source === 'game').forEach(p => {
+                const pc = createPeerConnection(p.username);
+                pc.pc.createOffer().then(offer => {
+                    return pc.pc.setLocalDescription(offer);
+                }).then(() => {
+                    socket.emit('webrtc:offer', { target: p.username, offer: pc.pc.localDescription });
+                });
+            });
+        }
+
         function validatePseudo() {
             const input = document.getElementById('pseudoInput');
             username = input.value.trim();
@@ -163,13 +199,16 @@
             document.getElementById('playerCard').classList.add('visible');
             document.getElementById('footerPlayer').textContent = username;
             socket.emit('register', { username: username });
-            socket.on('registered', () => {
-                showNotification('Bienvenue ' + username + ' !');
+            socket.on('registered', (data) => {
+                if (data.ok) { showNotification('Bienvenue ' + username + ' !'); }
+                else { showNotification(data.error || 'Erreur', 'error'); }
             });
         }
 
         function connectVoice() {
-            if (isConnected || !username) { if(!username) showNotification('Entrez votre pseudo d\'abord', 'error'); return; }
+            if (isConnected || !username) { if (!username) showNotification('Entrez votre pseudo d\'abord', 'error'); return; }
+            const inGame = onlinePlayers.find(p => p.username === username && p.source === 'game');
+            if (!inGame) { showNotification('Vous devez être connecté en jeu !', 'error'); return; }
             navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
                 localStream = stream;
                 isConnected = true;
@@ -251,6 +290,34 @@
                 btn.style.opacity = '0.5';
                 if (!isConnected) { status.textContent = 'Hors ligne - Rejoignez un serveur'; status.className = 'player-status disconnected'; }
             }
+        });
+
+        socket.on('webrtc:offer', async (data) => {
+            const pc = createPeerConnection(data.from);
+            await pc.pc.setRemoteDescription(data.offer);
+            const answer = await pc.pc.createAnswer();
+            await pc.pc.setLocalDescription(answer);
+            socket.emit('webrtc:answer', { target: data.from, answer });
+        });
+
+        socket.on('webrtc:answer', async (data) => {
+            const entry = remotePlayers.get(data.from);
+            if (entry) await entry.pc.setRemoteDescription(data.answer);
+        });
+
+        socket.on('webrtc:signal', async (data) => {
+            const entry = remotePlayers.get(data.from);
+            if (entry) await entry.pc.addIceCandidate(data.candidate);
+        });
+
+        socket.on('nearby', (players) => {
+            players.forEach(p => {
+                const entry = remotePlayers.get(p.username);
+                if (entry && entry.gainNode) {
+                    const vol = isMicOn || true ? (p.volume / 100) * (document.getElementById('volumeSlider').value / 100) : 0;
+                    entry.gainNode.gain.value = vol;
+                }
+            });
         });
 
         socket.on('disconnect', () => {
