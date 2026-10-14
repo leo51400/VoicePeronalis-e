@@ -20,7 +20,7 @@
         .btn { width: 100%; padding: 10px; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
         .btn-connect { background: #1a5c1a; color: #4ade80; border: 1px solid #22c55e; }
         .btn-connect:hover { background: #166534; }
-        .btn-connect:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-connect:disabled { opacity: 0.5; cursor: not-allowed; background: #1a5c1a; color: #4ade80; }
         .btn-disconnect { background: #3d1515; color: #f87171; border: 1px solid #991b1b; }
         .btn-disconnect:hover { background: #450a0a; }
         .btn-disconnect:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -30,6 +30,9 @@
         .player-card.visible { display: block; }
         .player-name { font-size: 14px; font-weight: 600; color: #fff; }
         .player-verified { font-size: 11px; color: #22c55e; margin-top: 3px; }
+        .player-status { font-size: 11px; margin-top: 5px; padding: 4px 8px; border-radius: 4px; display: inline-block; }
+        .player-status.connected { background: #064e3b; color: #34d399; }
+        .player-status.disconnected { background: #450a0a; color: #f87171; }
         .control-group { margin-bottom: 15px; }
         .control-label { font-size: 11px; color: #666; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
         .slider-container { display: flex; align-items: center; gap: 10px; }
@@ -47,7 +50,7 @@
         .player-item { background: #111118; border: 1px solid #1e1e2e; border-radius: 6px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
         .player-item-name { font-size: 13px; color: #e0e0e0; }
         .player-item-status { font-size: 11px; color: #22c55e; }
-        .player-item-status.offline { color: #ef4444; }
+        .player-item-status.talking { color: #ef4444; }
         .footer-bar { padding: 12px 20px; background: #111118; border-top: 1px solid #1e1e2e; font-size: 11px; color: #555; }
         .system-footer { position: fixed; bottom: 10px; left: 20px; font-size: 10px; color: #333; }
         .login-overlay { position: fixed; inset: 0; background: #0a0a0f; display: flex; align-items: center; justify-content: center; z-index: 100; }
@@ -60,6 +63,10 @@
         .login-input::placeholder { color: #4b5563; }
         .btn-login { background: #1f2937; color: #fff; border: 1px solid #374151; padding: 12px; }
         .btn-login:hover { background: #374151; }
+        .notification { position: fixed; top: 80px; right: 20px; padding: 12px 20px; border-radius: 8px; font-size: 13px; z-index: 200; animation: slideIn 0.3s ease; }
+        .notification.success { background: #064e3b; color: #34d399; border: 1px solid #059669; }
+        .notification.error { background: #450a0a; color: #f87171; border: 1px solid #dc2626; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     </style>
 </head>
 <body>
@@ -92,6 +99,7 @@
                 <div class="player-card" id="playerCard">
                     <div class="player-name" id="playerName">--</div>
                     <div class="player-verified">Compte Roblox vérifié</div>
+                    <div class="player-status disconnected" id="playerStatus">Déconnecté</div>
                 </div>
             </div>
             <div class="panel">
@@ -138,6 +146,14 @@
         let username = '';
         let onlinePlayers = [];
 
+        function showNotification(message, type = 'success') {
+            const notif = document.createElement('div');
+            notif.className = 'notification ' + type;
+            notif.textContent = message;
+            document.body.appendChild(notif);
+            setTimeout(() => notif.remove(), 3000);
+        }
+
         function validatePseudo() {
             const input = document.getElementById('pseudoInput');
             username = input.value.trim();
@@ -147,20 +163,18 @@
             document.getElementById('playerCard').classList.add('visible');
             document.getElementById('footerPlayer').textContent = username;
             socket.emit('register', { username: username });
+            socket.on('registered', () => {
+                showNotification('Bienvenue ' + username + ' !');
+            });
         }
 
         function connectVoice() {
-            if (isConnected || !username) return;
+            if (isConnected || !username) { if(!username) showNotification('Entrez votre pseudo d\'abord', 'error'); return; }
             navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
                 localStream = stream;
                 isConnected = true;
                 socket.emit('voice:connect', { username: username });
-                document.getElementById('statusDot').classList.add('online');
-                document.getElementById('statusText').textContent = 'En ligne';
-                document.getElementById('btnConnect').disabled = true;
-                document.getElementById('btnDisconnect').disabled = false;
-                document.getElementById('btnMic').disabled = false;
-            }).catch(err => { alert('Erreur micro: ' + err.message); });
+            }).catch(err => { showNotification('Erreur microphone: ' + err.message, 'error'); });
         }
 
         function disconnectVoice() {
@@ -169,15 +183,6 @@
             isConnected = false;
             isMicOn = false;
             socket.emit('voice:disconnect', { username: username });
-            onlinePlayers = [];
-            updatePlayersList();
-            document.getElementById('statusDot').classList.remove('online');
-            document.getElementById('statusText').textContent = 'Hors ligne';
-            document.getElementById('btnConnect').disabled = false;
-            document.getElementById('btnDisconnect').disabled = true;
-            document.getElementById('btnMic').disabled = true;
-            document.getElementById('btnMic').textContent = 'Microphone désactivé';
-            document.getElementById('btnMic').classList.remove('active');
         }
 
         function toggleMic() {
@@ -197,47 +202,50 @@
                 const src = ctx.createMediaStreamSource(localStream);
                 src.connect(ctx.destination);
                 setTimeout(() => { src.disconnect(); ctx.close(); }, 2000);
-            } else { alert('Connectez-vous d\'abord au vocal'); }
+            } else { showNotification('Connectez-vous d\'abord au vocal', 'error'); }
         }
 
         function updatePlayersList() {
             const list = document.getElementById('playersList');
             const empty = document.getElementById('emptyState');
             document.getElementById('playerCount').textContent = onlinePlayers.length;
-            if (onlinePlayers.length === 0) {
-                empty.style.display = 'flex';
-                list.innerHTML = '';
-                return;
-            }
+            if (onlinePlayers.length === 0) { empty.style.display = 'flex'; list.innerHTML = ''; return; }
             empty.style.display = 'none';
             list.innerHTML = onlinePlayers.map(p => `
                 <div class="player-item">
                     <span class="player-item-name">${p.username}</span>
-                    <span class="player-item-status">En ligne</span>
+                    <span class="player-item-status ${p.isTalking ? 'talking' : ''}">${p.isTalking ? 'Parle' : 'En ligne'}</span>
                 </div>
             `).join('');
         }
+
+        socket.on('connected', (data) => {
+            document.getElementById('statusDot').classList.add('online');
+            document.getElementById('statusText').textContent = 'En ligne';
+            document.getElementById('btnConnect').disabled = true;
+            document.getElementById('btnDisconnect').disabled = false;
+            document.getElementById('btnMic').disabled = false;
+            document.getElementById('playerStatus').textContent = 'Connecté';
+            document.getElementById('playerStatus').className = 'player-status connected';
+            showNotification(data.message || 'Connecté au vocal');
+        });
 
         socket.on('voice:players', (players) => {
             onlinePlayers = players.filter(p => p.username !== username);
             updatePlayersList();
         });
 
-        socket.on('voice:playerJoined', (player) => {
-            if (player.username !== username && !onlinePlayers.find(p => p.username === player.username)) {
-                onlinePlayers.push(player);
-                updatePlayersList();
-            }
-        });
-
-        socket.on('voice:playerLeft', (data) => {
-            onlinePlayers = onlinePlayers.filter(p => p.username !== data.username);
-            updatePlayersList();
-        });
-
         socket.on('disconnect', () => {
+            isConnected = false;
             onlinePlayers = [];
             updatePlayersList();
+            document.getElementById('statusDot').classList.remove('online');
+            document.getElementById('statusText').textContent = 'Hors ligne';
+            document.getElementById('btnConnect').disabled = false;
+            document.getElementById('btnDisconnect').disabled = true;
+            document.getElementById('btnMic').disabled = true;
+            document.getElementById('playerStatus').textContent = 'Déconnecté';
+            document.getElementById('playerStatus').className = 'player-status disconnected';
         });
     </script>
 </body>

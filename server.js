@@ -16,6 +16,7 @@ app.use(express.static('public'));
 
 const players = new Map();
 const voiceSessions = new Map();
+const usernameToSocket = new Map();
 
 function getDistance(a, b) {
     const dx = a.x - b.x, dy = a.y - b.y, dz = a.z - b.z;
@@ -36,14 +37,14 @@ function broadcastProximity() {
 }
 
 function broadcastVoicePlayers() {
-    const sessions = Array.from(voiceSessions.values());
+    const sessions = Array.from(voiceSessions.values()).map(s => ({ username: s.username, isTalking: s.isTalking }));
     io.emit('voice:players', sessions);
 }
 
 app.post('/api/update', (req, res) => {
     const { userId, username, position, isTalking } = req.body;
     if (!userId || !position) return res.status(400).json({ error: 'Missing' });
-    players.set(userId, { username, position, isTalking: !!isTalking, socketId: players.get(userId)?.socketId, lastUpdate: Date.now() });
+    players.set(userId, { username, position, isTalking: !!isTalking, lastUpdate: Date.now() });
     broadcastProximity();
     res.json({ ok: true });
 });
@@ -57,25 +58,32 @@ app.post('/api/talking', (req, res) => {
 
 app.post('/api/leave', (req, res) => {
     players.delete(req.body.userId);
-    io.emit('playerLeft', req.body.userId);
     res.json({ ok: true });
 });
 
 io.on('connection', (socket) => {
+    console.log('[Socket] Connected:', socket.id);
+
     socket.on('register', ({ username }) => {
+        console.log('[Socket] Register:', username);
         voiceSessions.set(socket.id, { username, socketId: socket.id, isTalking: false });
-        socket.emit('registered');
+        usernameToSocket.set(username, socket.id);
+        socket.emit('registered', { ok: true });
         broadcastVoicePlayers();
     });
 
     socket.on('voice:connect', ({ username }) => {
+        console.log('[Socket] Voice connect:', username);
         voiceSessions.set(socket.id, { username, socketId: socket.id, isTalking: false });
-        socket.emit('connected');
+        usernameToSocket.set(username, socket.id);
+        socket.emit('connected', { ok: true, message: 'Connecté au vocal' });
         broadcastVoicePlayers();
     });
 
     socket.on('voice:disconnect', ({ username }) => {
+        console.log('[Socket] Voice disconnect:', username);
         voiceSessions.delete(socket.id);
+        usernameToSocket.delete(username);
         broadcastVoicePlayers();
     });
 
@@ -86,8 +94,13 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
-        voiceSessions.delete(socket.id);
-        broadcastVoicePlayers();
+        console.log('[Socket] Disconnected:', socket.id);
+        const session = voiceSessions.get(socket.id);
+        if (session) {
+            usernameToSocket.delete(session.username);
+            voiceSessions.delete(socket.id);
+            broadcastVoicePlayers();
+        }
     });
 });
 
@@ -96,4 +109,4 @@ setInterval(() => {
     for (const [id, p] of players) if (now - p.lastUpdate > 10000) players.delete(id);
 }, 3000);
 
-server.listen(PORT, () => console.log(`[VoiceSystem] Render server on :${PORT}`));
+server.listen(PORT, () => console.log(`[VoiceSystem] Server running on :${PORT}`));
