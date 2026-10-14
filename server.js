@@ -5,6 +5,7 @@ const cors = require('cors');
 const ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs');
 const path = require('path');
+const { exec } = require('child_process');
 
 const app = express();
 const server = http.createServer(app);
@@ -167,5 +168,13 @@ setInterval(() => {
         if (now - p.lastUpdate > 10000) { gamePlayers.delete(id); broadcastAllPlayers(); }
     }
 }, 3000);
+
+exec('ffmpeg -version', (error, stdout, stderr) => {
+    if (error) {
+        console.error('[FFmpeg] Non installé:', error.message);
+    } else {
+        console.log('[FFmpeg] Installé et fonctionnel');
+    }
+});
 
 server.listen(PORT, () => console.log(`[VoiceSystem] Server on :${PORT}`));
