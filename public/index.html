@@ -3,60 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CHAT VOCAL EXTERNE - SCP : PARADOX</title>
+    <title>CHAT VOCAL EXTERNE - SCP : SITE-731</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0a0a0f; color: #e0e0e0; min-height: 100vh; }
-        
         .header { padding: 20px 30px; border-bottom: 1px solid #1a1a2e; display: flex; justify-content: space-between; align-items: center; }
         .header h1 { font-size: 20px; font-weight: 700; letter-spacing: 1px; color: #fff; }
         .header .subtitle { font-size: 11px; color: #666; margin-top: 2px; }
         .status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #888; }
         .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #e74c3c; }
         .status-dot.online { background: #2ecc71; box-shadow: 0 0 6px #2ecc71; }
-        
         .main { display: flex; height: calc(100vh - 70px); }
-        
         .sidebar { width: 280px; border-right: 1px solid #1a1a2e; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
         .panel { background: #111118; border: 1px solid #1e1e2e; border-radius: 8px; padding: 15px; }
         .panel-title { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
-        
         .btn { width: 100%; padding: 10px; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
         .btn-connect { background: #1a5c1a; color: #4ade80; border: 1px solid #22c55e; }
         .btn-connect:hover { background: #166534; }
+        .btn-connect:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-disconnect { background: #3d1515; color: #f87171; border: 1px solid #991b1b; }
         .btn-disconnect:hover { background: #450a0a; }
+        .btn-disconnect:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-mic { background: #1f2937; color: #9ca3af; border: 1px solid #374151; }
         .btn-mic.active { background: #7f1d1d; color: #fca5a5; border: 1px solid #dc2626; }
-        
-        .player-card { background: #0d0d14; border: 1px solid #1e1e2e; border-radius: 6px; padding: 12px; margin-top: 10px; }
+        .player-card { background: #0d0d14; border: 1px solid #1e1e2e; border-radius: 6px; padding: 12px; margin-top: 10px; display: none; }
+        .player-card.visible { display: block; }
         .player-name { font-size: 14px; font-weight: 600; color: #fff; }
         .player-verified { font-size: 11px; color: #22c55e; margin-top: 3px; }
-        
         .control-group { margin-bottom: 15px; }
         .control-label { font-size: 11px; color: #666; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
-        
         .slider-container { display: flex; align-items: center; gap: 10px; }
         .slider-container input[type="range"] { flex: 1; height: 4px; background: #374151; border-radius: 2px; outline: none; -webkit-appearance: none; }
         .slider-container input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #fff; cursor: pointer; }
         .slider-value { font-size: 11px; color: #888; min-width: 35px; text-align: right; }
-        
         .checkbox-container { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
         .checkbox-container input[type="checkbox"] { width: 16px; height: 16px; accent-color: #dc2626; }
         .checkbox-container label { font-size: 12px; color: #9ca3af; }
-        
         .content { flex: 1; padding: 20px; display: flex; flex-direction: column; }
         .content-header { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 1px; padding-bottom: 15px; border-bottom: 1px solid #1a1a2e; margin-bottom: 20px; }
-        
         .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #444; }
         .empty-state p { font-size: 14px; margin-bottom: 5px; }
         .empty-state span { font-size: 12px; }
-        
+        .player-item { background: #111118; border: 1px solid #1e1e2e; border-radius: 6px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .player-item-name { font-size: 13px; color: #e0e0e0; }
+        .player-item-status { font-size: 11px; color: #22c55e; }
+        .player-item-status.offline { color: #ef4444; }
         .footer-bar { padding: 12px 20px; background: #111118; border-top: 1px solid #1e1e2e; font-size: 11px; color: #555; }
-        
         .system-footer { position: fixed; bottom: 10px; left: 20px; font-size: 10px; color: #333; }
-        
-        /* Login Screen */
         .login-overlay { position: fixed; inset: 0; background: #0a0a0f; display: flex; align-items: center; justify-content: center; z-index: 100; }
         .login-overlay.hidden { display: none; }
         .login-box { background: #111118; border: 1px solid #1e1e2e; border-radius: 12px; padding: 40px; width: 90%; max-width: 420px; text-align: center; }
@@ -70,7 +63,6 @@
     </style>
 </head>
 <body>
-    <!-- Login Screen -->
     <div class="login-overlay" id="loginOverlay">
         <div class="login-box">
             <h2>Connexion</h2>
@@ -80,7 +72,6 @@
         </div>
     </div>
 
-    <!-- Main Interface -->
     <div class="header">
         <div>
             <h1>CHAT VOCAL EXTERNE</h1>
@@ -97,14 +88,12 @@
             <div class="panel">
                 <div class="panel-title">Connexion</div>
                 <button class="btn btn-connect" id="btnConnect" onclick="connectVoice()">Se connecter au vocal</button>
-                <button class="btn btn-disconnect" id="btnDisconnect" onclick="disconnectVoice()" style="margin-top:8px; opacity:0.5;" disabled>Se déconnecter du vocal</button>
-                
-                <div class="player-card" id="playerCard" style="display:none;">
+                <button class="btn btn-disconnect" id="btnDisconnect" onclick="disconnectVoice()" disabled>Se déconnecter du vocal</button>
+                <div class="player-card" id="playerCard">
                     <div class="player-name" id="playerName">--</div>
                     <div class="player-verified">Compte Roblox vérifié</div>
                 </div>
             </div>
-
             <div class="panel">
                 <div class="panel-title">Contrôles Audio</div>
                 <div class="control-group">
@@ -112,11 +101,10 @@
                     <button class="btn btn-mic" id="btnMic" onclick="toggleMic()" disabled>Microphone désactivé</button>
                 </div>
                 <div class="control-group">
-                    <button class="btn btn-mic" onclick="testAudio()" style="background:#1f2937;color:#9ca3af;border:1px solid #374151;">Test</button>
+                    <button class="btn btn-mic" onclick="testAudio()">Test</button>
                 </div>
                 <div class="control-group">
                     <div class="control-label">Volume Général</div>
-                    <div class="control-label" style="display:flex;justify-content:space-between;"><span>Sortie</span></div>
                     <div class="slider-container">
                         <input type="range" id="volumeSlider" min="0" max="100" value="100" onchange="updateVolume(this.value)">
                         <span class="slider-value" id="volumeValue">100%</span>
@@ -128,7 +116,6 @@
                 </div>
             </div>
         </div>
-
         <div class="content">
             <div class="content-header">Joueurs connectés : <span id="playerCount">0</span></div>
             <div class="empty-state" id="emptyState">
@@ -139,7 +126,7 @@
         </div>
     </div>
 
-    <div class="footer-bar" id="footerBar">Compte vérifié : <span id="footerPlayer">--</span></div>
+    <div class="footer-bar">Compte vérifié : <span id="footerPlayer">--</span></div>
     <div class="system-footer">Système créé par Fluxium</div>
 
     <script src="/socket.io/socket.io.js"></script>
@@ -149,36 +136,31 @@
         let isConnected = false;
         let isMicOn = false;
         let username = '';
+        let onlinePlayers = [];
 
         function validatePseudo() {
             const input = document.getElementById('pseudoInput');
             username = input.value.trim();
             if (!username) { alert('Veuillez entrer votre pseudo Roblox'); return; }
-            
             document.getElementById('loginOverlay').classList.add('hidden');
             document.getElementById('playerName').textContent = username;
-            document.getElementById('playerCard').style.display = 'block';
+            document.getElementById('playerCard').classList.add('visible');
             document.getElementById('footerPlayer').textContent = username;
             socket.emit('register', { username: username });
         }
 
         function connectVoice() {
-            if (isConnected) return;
+            if (isConnected || !username) return;
             navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
                 localStream = stream;
                 isConnected = true;
-                socket.emit('connect', { username: username });
+                socket.emit('voice:connect', { username: username });
                 document.getElementById('statusDot').classList.add('online');
                 document.getElementById('statusText').textContent = 'En ligne';
-                document.getElementById('btnConnect').style.opacity = '0.5';
                 document.getElementById('btnConnect').disabled = true;
-                document.getElementById('btnDisconnect').style.opacity = '1';
                 document.getElementById('btnDisconnect').disabled = false;
                 document.getElementById('btnMic').disabled = false;
-                document.getElementById('emptyState').innerHTML = '<p>Session active</p><span>Connecté au serveur</span>';
-            }).catch(err => {
-                alert('Impossible d\'accéder au micro: ' + err.message);
-            });
+            }).catch(err => { alert('Erreur micro: ' + err.message); });
         }
 
         function disconnectVoice() {
@@ -186,51 +168,76 @@
             if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
             isConnected = false;
             isMicOn = false;
-            socket.emit('disconnect', { username: username });
+            socket.emit('voice:disconnect', { username: username });
+            onlinePlayers = [];
+            updatePlayersList();
             document.getElementById('statusDot').classList.remove('online');
             document.getElementById('statusText').textContent = 'Hors ligne';
-            document.getElementById('btnConnect').style.opacity = '1';
             document.getElementById('btnConnect').disabled = false;
-            document.getElementById('btnDisconnect').style.opacity = '0.5';
             document.getElementById('btnDisconnect').disabled = true;
             document.getElementById('btnMic').disabled = true;
             document.getElementById('btnMic').textContent = 'Microphone désactivé';
             document.getElementById('btnMic').classList.remove('active');
-            document.getElementById('emptyState').innerHTML = '<p>Aucune session active</p><span>En attente de connexion</span>';
         }
 
         function toggleMic() {
-            if (!localStream) return;
+            if (!localStream || !isConnected) return;
             isMicOn = !isMicOn;
             localStream.getAudioTracks().forEach(t => t.enabled = isMicOn);
-            socket.emit('talking', { username: username, isTalking: isMicOn });
-            const btn = document.getElementById('btnMic');
-            btn.textContent = isMicOn ? 'Microphone activé' : 'Microphone désactivé';
-            btn.classList.toggle('active', isMicOn);
+            socket.emit('voice:talking', { username: username, isTalking: isMicOn });
+            document.getElementById('btnMic').textContent = isMicOn ? 'Microphone activé' : 'Microphone désactivé';
+            document.getElementById('btnMic').classList.toggle('active', isMicOn);
         }
 
-        function updateVolume(val) {
-            document.getElementById('volumeValue').textContent = val + '%';
-        }
-
-        function toggleMuteAll() {
-            const muted = document.getElementById('muteAll').checked;
-            socket.emit('muteAll', { muted: muted });
-        }
-
+        function updateVolume(val) { document.getElementById('volumeValue').textContent = val + '%'; }
+        function toggleMuteAll() {}
         function testAudio() {
             if (localStream) {
                 const ctx = new AudioContext();
                 const src = ctx.createMediaStreamSource(localStream);
                 src.connect(ctx.destination);
                 setTimeout(() => { src.disconnect(); ctx.close(); }, 2000);
-            } else {
-                alert('Connectez-vous d\'abord au vocal');
-            }
+            } else { alert('Connectez-vous d\'abord au vocal'); }
         }
 
-        socket.on('playerUpdate', (data) => {
-            document.getElementById('playerCount').textContent = data.count || 0;
+        function updatePlayersList() {
+            const list = document.getElementById('playersList');
+            const empty = document.getElementById('emptyState');
+            document.getElementById('playerCount').textContent = onlinePlayers.length;
+            if (onlinePlayers.length === 0) {
+                empty.style.display = 'flex';
+                list.innerHTML = '';
+                return;
+            }
+            empty.style.display = 'none';
+            list.innerHTML = onlinePlayers.map(p => `
+                <div class="player-item">
+                    <span class="player-item-name">${p.username}</span>
+                    <span class="player-item-status">En ligne</span>
+                </div>
+            `).join('');
+        }
+
+        socket.on('voice:players', (players) => {
+            onlinePlayers = players.filter(p => p.username !== username);
+            updatePlayersList();
+        });
+
+        socket.on('voice:playerJoined', (player) => {
+            if (player.username !== username && !onlinePlayers.find(p => p.username === player.username)) {
+                onlinePlayers.push(player);
+                updatePlayersList();
+            }
+        });
+
+        socket.on('voice:playerLeft', (data) => {
+            onlinePlayers = onlinePlayers.filter(p => p.username !== data.username);
+            updatePlayersList();
+        });
+
+        socket.on('disconnect', () => {
+            onlinePlayers = [];
+            updatePlayersList();
         });
     </script>
 </body>

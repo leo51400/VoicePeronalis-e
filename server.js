@@ -15,6 +15,7 @@ app.use(express.json());
 app.use(express.static('public'));
 
 const players = new Map();
+const voiceSessions = new Map();
 
 function getDistance(a, b) {
     const dx = a.x - b.x, dy = a.y - b.y, dz = a.z - b.z;
@@ -32,6 +33,11 @@ function broadcastProximity() {
         }
         if (p.socketId) io.to(p.socketId).emit('nearby', nearby);
     }
+}
+
+function broadcastVoicePlayers() {
+    const sessions = Array.from(voiceSessions.values());
+    io.emit('voice:players', sessions);
 }
 
 app.post('/api/update', (req, res) => {
@@ -57,32 +63,31 @@ app.post('/api/leave', (req, res) => {
 
 io.on('connection', (socket) => {
     socket.on('register', ({ username }) => {
-        for (const [id, p] of players) {
-            if (p.username === username) { p.socketId = socket.id; break; }
-        }
+        voiceSessions.set(socket.id, { username, socketId: socket.id, isTalking: false });
         socket.emit('registered');
+        broadcastVoicePlayers();
     });
 
-    socket.on('connect', ({ username }) => {
-        for (const [id, p] of players) {
-            if (p.username === username) {
-                p.socketId = socket.id;
-                socket.emit('connected', { nearby: [] });
-                break;
-            }
-        }
+    socket.on('voice:connect', ({ username }) => {
+        voiceSessions.set(socket.id, { username, socketId: socket.id, isTalking: false });
+        socket.emit('connected');
+        broadcastVoicePlayers();
     });
 
-    socket.on('talking', ({ username, isTalking }) => {
-        for (const [id, p] of players) {
-            if (p.username === username) { p.isTalking = isTalking; break; }
-        }
-        broadcastProximity();
+    socket.on('voice:disconnect', ({ username }) => {
+        voiceSessions.delete(socket.id);
+        broadcastVoicePlayers();
     });
 
-    socket.on('muteAll', () => {});
+    socket.on('voice:talking', ({ username, isTalking }) => {
+        const session = voiceSessions.get(socket.id);
+        if (session) { session.isTalking = isTalking; }
+        broadcastVoicePlayers();
+    });
+
     socket.on('disconnect', () => {
-        for (const [id, p] of players) if (p.socketId === socket.id) p.socketId = null;
+        voiceSessions.delete(socket.id);
+        broadcastVoicePlayers();
     });
 });
 
