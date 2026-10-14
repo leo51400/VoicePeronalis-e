@@ -231,7 +231,7 @@
         });
 
         socket.on('players:all', (players) => {
-            onlinePlayers = players.filter(p => p.username !== username);
+            onlinePlayers = players;
             updatePlayersList();
         });
 
