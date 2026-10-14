@@ -212,8 +212,13 @@
             if (onlinePlayers.length === 0) { empty.style.display = 'flex'; list.innerHTML = ''; return; }
             empty.style.display = 'none';
             list.innerHTML = onlinePlayers.map(p => `
-                <div class="player-item">
-                    <span class="player-item-name">${p.username}</span>
+                <div class="player-item ${p.isTalking ? 'speaking' : ''}">
+                    <div class="player-info">
+                        <span class="player-item-name">${p.isTalking ? '🔊 ' : ''}${p.username}</span>
+                        <div class="speaking-bars" style="display:${p.isTalking ? 'flex' : 'none'}">
+                            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                        </div>
+                    </div>
                     <span class="player-item-status ${p.isTalking ? 'talking' : ''}">${p.isTalking ? 'Parle' : 'En ligne'}</span>
                 </div>
             `).join('');
