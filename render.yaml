@@ -1,11 +1,9 @@
 services:
   - type: web
     name: voice-system
-    env: docker
-    dockerfilePath: ./Dockerfile
+    env: node
+    buildCommand: apt-get update && apt-get install -y ffmpeg && npm install
+    startCommand: node server.js
     envVars:
       - key: PORT
         value: 3000
-      - key: PATH
-        value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-    startCommand: node server.js
