@@ -76,33 +76,50 @@ app.post('/api/leave', (req, res) => {
 const audioDir = path.join(__dirname, 'temp_audio');
 if (!fs.existsSync(audioDir)) fs.mkdirSync(audioDir);
 
-app.post('/api/process-audio', (req, res) => {
-    const { audioData, format = 'mp3', bitrate = '128k' } = req.body;
-    if (!audioData) return res.status(400).json({ error: 'Missing audio data' });
-
-    const inputPath = path.join(audioDir, `input_${Date.now()}.webm`);
-    const outputPath = path.join(audioDir, `output_${Date.now()}.${format}`);
-
-    fs.writeFileSync(inputPath, Buffer.from(audioData, 'base64'));
-
-    ffmpeg(inputPath)
-        .toFormat(format)
-        .audioBitrate(bitrate)
-        .on('end', () => {
-            const processed = fs.readFileSync(outputPath);
-            fs.unlinkSync(inputPath);
-            fs.unlinkSync(outputPath);
-            res.json({ success: true, audioData: processed.toString('base64'), format });
-        })
-        .on('error', (err) => {
-            fs.unlinkSync(inputPath);
-            if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
-            res.status(500).json({ error: 'FFmpeg processing failed', details: err.message });
-        })
-        .save(outputPath);
-});
-
 io.on('connection', (socket) => {
+    socket.on('webrtc:offer', (data) => {
+        socket.broadcast.emit('webrtc:offer', { from: socket.id, ...data });
+    });
+
+    socket.on('webrtc:answer', (data) => {
+        socket.broadcast.emit('webrtc:answer', { from: socket.id, ...data });
+    });
+
+    socket.on('webrtc:signal', (data) => {
+        socket.broadcast.emit('webrtc:signal', { from: socket.id, ...data });
+    });
+
+    socket.on('audio:data', (data) => {
+        const { audioBuffer, target } = data;
+        if (!audioBuffer) return;
+
+        const inputPath = path.join(audioDir, `input_${socket.id}_${Date.now()}.webm`);
+        const outputPath = path.join(audioDir, `output_${socket.id}_${Date.now()}.opus`);
+
+        fs.writeFileSync(inputPath, Buffer.from(audioBuffer, 'base64'));
+
+        ffmpeg(inputPath)
+            .toFormat('opus')
+            .audioCodec('libopus')
+            .audioChannels(1)
+            .audioFrequency(48000)
+            .on('end', () => {
+                const processed = fs.readFileSync(outputPath);
+                fs.unlinkSync(inputPath);
+                fs.unlinkSync(outputPath);
+                io.to(target).emit('audio:processed', { 
+                    from: socket.id, 
+                    audioData: processed.toString('base64') 
+                });
+            })
+            .on('error', (err) => {
+                fs.unlinkSync(inputPath);
+                if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+                console.error('FFmpeg error:', err.message);
+            })
+            .save(outputPath);
+    });
+
     socket.on('register', ({ username }) => {
         const inGame = Array.from(gamePlayers.values()).find(p => p.username === username);
         if (!inGame) {

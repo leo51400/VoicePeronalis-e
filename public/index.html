@@ -213,11 +213,40 @@
                 localStream = stream;
                 isConnected = true;
                 socket.emit('voice:connect', { username: username });
+                startAudioCapture();
             }).catch(err => { showNotification('Erreur microphone: ' + err.message, 'error'); });
+        }
+
+        let mediaRecorder;
+        let audioChunks = [];
+
+        function startAudioCapture() {
+            if (!localStream) return;
+            mediaRecorder = new MediaRecorder(localStream, { mimeType: 'audio/webm' });
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) {
+                    audioChunks.push(e.data);
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const base64Audio = reader.result.split(',')[1];
+                        onlinePlayers.filter(p => p.username !== username && p.source === 'game').forEach(p => {
+                            socket.emit('audio:data', { audioBuffer: base64Audio, target: p.username });
+                        });
+                    };
+                    reader.readAsDataURL(audioBlob);
+                    audioChunks = [];
+                }
+            };
+
+            mediaRecorder.start(100);
         }
 
         function disconnectVoice() {
             if (!isConnected) return;
+            if (mediaRecorder) { mediaRecorder.stop(); mediaRecorder = null; }
             if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
             isConnected = false;
             isMicOn = false;
@@ -318,6 +347,14 @@
                     entry.gainNode.gain.value = vol;
                 }
             });
+        });
+
+        socket.on('audio:processed', async (data) => {
+            const { from, audioData } = data;
+            const audioBlob = new Blob([Uint8Array.from(atob(audioData), c => c.charCodeAt(0))], { type: 'audio/opus' });
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = new Audio(audioUrl);
+            audio.play().catch(err => console.error('Playback error:', err));
         });
 
         socket.on('disconnect', () => {
