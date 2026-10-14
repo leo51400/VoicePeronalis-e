@@ -2,6 +2,9 @@ const express = require('express');
 const http = require('http');
 const { Server: SocketIOServer } = require('socket.io');
 const cors = require('cors');
+const ffmpeg = require('fluent-ffmpeg');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
@@ -70,6 +73,35 @@ app.post('/api/leave', (req, res) => {
     res.json({ ok: true });
 });
 
+const audioDir = path.join(__dirname, 'temp_audio');
+if (!fs.existsSync(audioDir)) fs.mkdirSync(audioDir);
+
+app.post('/api/process-audio', (req, res) => {
+    const { audioData, format = 'mp3', bitrate = '128k' } = req.body;
+    if (!audioData) return res.status(400).json({ error: 'Missing audio data' });
+
+    const inputPath = path.join(audioDir, `input_${Date.now()}.webm`);
+    const outputPath = path.join(audioDir, `output_${Date.now()}.${format}`);
+
+    fs.writeFileSync(inputPath, Buffer.from(audioData, 'base64'));
+
+    ffmpeg(inputPath)
+        .toFormat(format)
+        .audioBitrate(bitrate)
+        .on('end', () => {
+            const processed = fs.readFileSync(outputPath);
+            fs.unlinkSync(inputPath);
+            fs.unlinkSync(outputPath);
+            res.json({ success: true, audioData: processed.toString('base64'), format });
+        })
+        .on('error', (err) => {
+            fs.unlinkSync(inputPath);
+            if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+            res.status(500).json({ error: 'FFmpeg processing failed', details: err.message });
+        })
+        .save(outputPath);
+});
+
 io.on('connection', (socket) => {
     socket.on('register', ({ username }) => {
         const inGame = Array.from(gamePlayers.values()).find(p => p.username === username);
@@ -107,7 +139,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
-        voiceSessions.delete(socket.id);
+        webSessions.delete(socket.id);
         broadcastAllPlayers();
     });
 });
