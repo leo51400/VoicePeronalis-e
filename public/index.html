@@ -230,7 +230,7 @@
             showNotification(data.message || 'Connecté au vocal');
         });
 
-        socket.on('voice:players', (players) => {
+        socket.on('players:all', (players) => {
             onlinePlayers = players.filter(p => p.username !== username);
             updatePlayersList();
         });
