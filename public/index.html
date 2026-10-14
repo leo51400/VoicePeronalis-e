@@ -220,6 +220,7 @@
         }
 
         socket.on('connected', (data) => {
+            if (!data.ok) { showNotification(data.error || 'Vous devez être connecté en jeu', 'error'); return; }
             document.getElementById('statusDot').classList.add('online');
             document.getElementById('statusText').textContent = 'En ligne';
             document.getElementById('btnConnect').disabled = true;
@@ -233,6 +234,18 @@
         socket.on('players:all', (players) => {
             onlinePlayers = players;
             updatePlayersList();
+            const inGame = players.find(p => p.username === username && p.source === 'game');
+            const btn = document.getElementById('btnConnect');
+            const status = document.getElementById('playerStatus');
+            if (inGame) {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                if (!isConnected) { status.textContent = 'En jeu - Prêt à se connecter'; status.className = 'player-status connected'; }
+            } else if (!isConnected) {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                if (!isConnected) { status.textContent = 'Hors ligne - Rejoignez un serveur'; status.className = 'player-status disconnected'; }
+            }
         });
 
         socket.on('disconnect', () => {
