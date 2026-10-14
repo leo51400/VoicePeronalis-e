@@ -2,8 +2,7 @@ services:
   - type: web
     name: voice-system
     env: node
-    buildCommand: apt-get update && apt-get install -y ffmpeg && npm install
-    startCommand: node server.js
+    startCommand: apt-get update && apt-get install -y ffmpeg && node server.js
     envVars:
       - key: PORT
         value: 3000
