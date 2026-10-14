@@ -72,13 +72,25 @@ app.post('/api/leave', (req, res) => {
 
 io.on('connection', (socket) => {
     socket.on('register', ({ username }) => {
-        webSessions.set(socket.id, { username, isTalking: false });
+        const inGame = Array.from(gamePlayers.values()).find(p => p.username === username);
+        if (!inGame) {
+            socket.emit('registered', { ok: false, error: 'Joueur non connecté en jeu' });
+            return;
+        }
+        webSessions.set(socket.id, { username, isTalking: false, userId: inGame.userId });
+        inGame.socketId = socket.id;
         socket.emit('registered', { ok: true });
         broadcastAllPlayers();
     });
 
     socket.on('voice:connect', ({ username }) => {
-        webSessions.set(socket.id, { username, isTalking: false });
+        const inGame = Array.from(gamePlayers.values()).find(p => p.username === username);
+        if (!inGame) {
+            socket.emit('connected', { ok: false, error: 'Connectez-vous d\'abord en jeu' });
+            return;
+        }
+        webSessions.set(socket.id, { username, isTalking: false, userId: inGame.userId });
+        inGame.socketId = socket.id;
         socket.emit('connected', { ok: true, message: 'Connecté au vocal' });
         broadcastAllPlayers();
     });
