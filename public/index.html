@@ -624,8 +624,24 @@ function connecterServeur() {
  });
 
  socket.on('players:all', (players) => {
+   const webPlayers = players.filter(p => p.source === 'web');
    const gamePlayers = players.filter(p => p.source === 'game');
    log('Joueurs en jeu : ' + gamePlayers.map(p => p.username).join(', ') || 'Aucun');
+   log('Joueurs web : ' + webPlayers.map(p => p.username).join(', ') || 'Aucun');
+
+   // Mettre à jour la liste des peers actifs avec les joueurs web
+   const nomsActifs = webPlayers.map(p => p.username);
+   dernierPeersConnus = nomsActifs.slice();
+
+   // Gérer les connexions WebRTC
+   for (const nom in peerConnections) {
+     if (!nomsActifs.includes(nom)) fermerPeer(nom);
+   }
+   for (const nom of nomsActifs) {
+     if (!peerConnections[nom] && nom !== monNom) {
+       if (monNom < nom) creerPeer(nom, true);
+     }
+   }
  });
 }
 
@@ -648,7 +664,7 @@ function creerPeer(nomJoueur, initiateur) {
    if (!audioElements[nomJoueur]) {
      const audio = new Audio();
      audio.autoplay = true;
-     audio.muted = true;
+     audio.muted = false;
      document.body.appendChild(audio);
      audioElements[nomJoueur] = audio;
      volsLocaux[nomJoueur]  = 100;
