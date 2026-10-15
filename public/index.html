@@ -1,374 +1,783 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CHAT VOCAL EXTERNE - SCP : SITE-731</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0a0a0f; color: #e0e0e0; min-height: 100vh; }
-        .header { padding: 20px 30px; border-bottom: 1px solid #1a1a2e; display: flex; justify-content: space-between; align-items: center; }
-        .header h1 { font-size: 20px; font-weight: 700; letter-spacing: 1px; color: #fff; }
-        .header .subtitle { font-size: 11px; color: #666; margin-top: 2px; }
-        .status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #888; }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #e74c3c; }
-        .status-dot.online { background: #2ecc71; box-shadow: 0 0 6px #2ecc71; }
-        .main { display: flex; height: calc(100vh - 70px); }
-        .sidebar { width: 280px; border-right: 1px solid #1a1a2e; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
-        .panel { background: #111118; border: 1px solid #1e1e2e; border-radius: 8px; padding: 15px; }
-        .panel-title { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
-        .btn { width: 100%; padding: 10px; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
-        .btn-connect { background: #1a5c1a; color: #4ade80; border: 1px solid #22c55e; }
-        .btn-connect:hover { background: #166534; }
-        .btn-connect:disabled { opacity: 0.5; cursor: not-allowed; background: #1a5c1a; color: #4ade80; }
-        .btn-disconnect { background: #3d1515; color: #f87171; border: 1px solid #991b1b; }
-        .btn-disconnect:hover { background: #450a0a; }
-        .btn-disconnect:disabled { opacity: 0.5; cursor: not-allowed; }
-        .btn-mic { background: #1f2937; color: #9ca3af; border: 1px solid #374151; }
-        .btn-mic.active { background: #7f1d1d; color: #fca5a5; border: 1px solid #dc2626; }
-        .player-card { background: #0d0d14; border: 1px solid #1e1e2e; border-radius: 6px; padding: 12px; margin-top: 10px; display: none; }
-        .player-card.visible { display: block; }
-        .player-name { font-size: 14px; font-weight: 600; color: #fff; }
-        .player-verified { font-size: 11px; color: #22c55e; margin-top: 3px; }
-        .player-status { font-size: 11px; margin-top: 5px; padding: 4px 8px; border-radius: 4px; display: inline-block; }
-        .player-status.connected { background: #064e3b; color: #34d399; }
-        .player-status.disconnected { background: #450a0a; color: #f87171; }
-        .control-group { margin-bottom: 15px; }
-        .control-label { font-size: 11px; color: #666; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .slider-container { display: flex; align-items: center; gap: 10px; }
-        .slider-container input[type="range"] { flex: 1; height: 4px; background: #374151; border-radius: 2px; outline: none; -webkit-appearance: none; }
-        .slider-container input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #fff; cursor: pointer; }
-        .slider-value { font-size: 11px; color: #888; min-width: 35px; text-align: right; }
-        .checkbox-container { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
-        .checkbox-container input[type="checkbox"] { width: 16px; height: 16px; accent-color: #dc2626; }
-        .checkbox-container label { font-size: 12px; color: #9ca3af; }
-        .content { flex: 1; padding: 20px; display: flex; flex-direction: column; }
-        .content-header { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 1px; padding-bottom: 15px; border-bottom: 1px solid #1a1a2e; margin-bottom: 20px; }
-        .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #444; }
-        .empty-state p { font-size: 14px; margin-bottom: 5px; }
-        .empty-state span { font-size: 12px; }
-        .player-item { background: #111118; border: 1px solid #1e1e2e; border-radius: 6px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
-        .player-item-name { font-size: 13px; color: #e0e0e0; }
-        .player-item-status { font-size: 11px; color: #22c55e; }
-        .player-item-status.talking { color: #ef4444; }
-        .footer-bar { padding: 12px 20px; background: #111118; border-top: 1px solid #1e1e2e; font-size: 11px; color: #555; }
-        .system-footer { position: fixed; bottom: 10px; left: 20px; font-size: 10px; color: #333; }
-        .login-overlay { position: fixed; inset: 0; background: #0a0a0f; display: flex; align-items: center; justify-content: center; z-index: 100; }
-        .login-overlay.hidden { display: none; }
-        .login-box { background: #111118; border: 1px solid #1e1e2e; border-radius: 12px; padding: 40px; width: 90%; max-width: 420px; text-align: center; }
-        .login-box h2 { font-size: 14px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 20px; }
-        .login-box p { font-size: 13px; color: #9ca3af; margin-bottom: 25px; }
-        .login-input { width: 100%; padding: 12px 16px; background: #0d0d14; border: 1px solid #374151; border-radius: 6px; color: #fff; font-size: 13px; text-align: center; outline: none; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; }
-        .login-input:focus { border-color: #4b5563; }
-        .login-input::placeholder { color: #4b5563; }
-        .btn-login { background: #1f2937; color: #fff; border: 1px solid #374151; padding: 12px; }
-        .btn-login:hover { background: #374151; }
-        .notification { position: fixed; top: 80px; right: 20px; padding: 12px 20px; border-radius: 8px; font-size: 13px; z-index: 200; animation: slideIn 0.3s ease; }
-        .notification.success { background: #064e3b; color: #34d399; border: 1px solid #059669; }
-        .notification.error { background: #450a0a; color: #f87171; border: 1px solid #dc2626; }
-        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-    </style>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>Chat Vocal</title>
+ <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+ <style>
+   :root {
+     --bg:          #191919;
+     --bg2:         #191919;
+     --bg3:         #131313;
+     --header:      #131313;
+     --border:      #333333;
+     --border2:     #323232;
+     --green:       #81ac7b;
+     --green-dim:   #6c8069;
+     --red:         #975a5a;
+     --red-dim:     #633c3c;
+     --amber:       #a99364;
+     --text:        #edecec;
+     --text-dim:    #bdbdbd;
+     --text-bright: #e7e7e7;
+   }
+
+   * { margin: 0; padding: 0; box-sizing: border-box; }
+
+   body {
+     font-family: 'Inter', sans-serif;
+     background: var(--bg);
+     color: var(--text);
+     min-height: 100vh;
+     display: flex;
+     flex-direction: column;
+   }
+
+   header {
+     flex-shrink: 0;
+     display: flex;
+     align-items: center;
+     gap: 16px;
+     padding: 16px 28px;
+     border-bottom: 1px solid var(--border);
+     background: var(--header);
+   }
+
+   .header-title { flex: 1; }
+   .header-title h1 {
+     font-size: 18px; font-weight: 600; letter-spacing: 2px;
+     color: var(--text-bright); text-transform: uppercase;
+   }
+   .header-title p {
+     font-size: 11px; color: var(--text-dim); letter-spacing: 1px;
+     text-transform: uppercase; margin-top: 2px;
+   }
+
+   .header-status {
+     font-size: 11px; letter-spacing: 1px;
+     display: flex; align-items: center; gap: 6px;
+     color: var(--text-dim);
+   }
+   .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); }
+   .dot.green { background: var(--green); }
+   .dot.red   { background: var(--red); }
+
+   .page-section { display: flex; flex-direction: column; flex: 1; }
+   .page-section.hidden { display: none; }
+
+   #page-connexion {
+     align-items: center;
+     justify-content: center;
+     padding: 28px 20px;
+   }
+
+   #page-connexion .panel {
+     width: 100%;
+     max-width: 520px;
+   }
+
+   .panel {
+     background: var(--bg2);
+     border: 1px solid var(--border);
+     border-radius: 6px;
+     overflow: hidden;
+   }
+
+   .panel-header {
+     flex-shrink: 0;
+     display: flex;
+     align-items: center;
+     gap: 10px;
+     padding: 12px 16px;
+     border-bottom: 1px solid var(--border);
+     background: var(--bg3);
+   }
+   .panel-header span {
+     font-size: 12px; font-weight: 600; letter-spacing: 1px;
+     text-transform: uppercase; color: var(--text-dim);
+   }
+
+   .panel-body { padding: 16px; text-align: center; }
+
+   .btn {
+     display: flex; align-items: center; justify-content: center; gap: 8px;
+     width: 100%; padding: 10px 16px;
+     border: 1px solid var(--border2); border-radius: 4px;
+     background: var(--bg3); color: var(--text);
+     font-family: 'Inter', sans-serif; font-size: 13px;
+     font-weight: 500; letter-spacing: 0.5px;
+     cursor: pointer; transition: all 0.15s; margin-bottom: 8px;
+   }
+   .btn:hover:not(:disabled) { background: #2a2a2a; color: var(--text-bright); border-color: #666; }
+   .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+   .btn.green { border-color: var(--green-dim); color: var(--green); background: rgba(74,158,63,0.08); }
+   .btn.green:hover:not(:disabled) { background: rgba(74,158,63,0.15); }
+   .btn.amber { border-color: #5a4a1e; color: #c09840; background: rgba(158,122,46,0.08); }
+   .btn.amber:hover:not(:disabled) { border-color: #7a6a2e; color: #d4ac50; background: rgba(158,122,46,0.15); }
+
+   .input-text {
+     width: 100%; padding: 9px 12px; margin-bottom: 8px;
+     background: var(--bg3); border: 1px solid var(--border2);
+     border-radius: 4px; color: var(--text-bright);
+     font-family: 'Inter', sans-serif; font-size: 13px;
+     outline: none; text-align: center;
+   }
+   .input-text:focus { border-color: #555; }
+
+   .audio-label {
+     font-size: 11px; font-weight: 600; letter-spacing: 1px;
+     text-transform: uppercase; color: var(--text-dim);
+     margin-bottom: 8px; display: block;
+   }
+
+   .auth-user {
+     display: none; align-items: center; gap: 10px; padding: 10px 12px;
+     background: rgba(74,158,63,0.07); border: 1px solid rgba(74,158,63,0.2);
+     border-radius: 4px; margin: 12px 0 10px 0;
+   }
+   .auth-user-info { flex: 1; }
+   .auth-user-name { font-size: 13px; font-weight: 600; color: var(--text-bright); }
+   .auth-user-sub  { font-size: 10px; color: var(--green); letter-spacing: 0.5px; margin-top: 2px; }
+
+   .master-vol { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+   .master-vol label { font-size: 11px; color: var(--text-dim); min-width: 50px; }
+
+   input[type=range] {
+     flex: 1; -webkit-appearance: none; height: 3px;
+     background: var(--border2); border-radius: 2px; outline: none; cursor: pointer;
+   }
+   input[type=range]::-webkit-slider-thumb {
+     -webkit-appearance: none; width: 12px; height: 12px;
+     border-radius: 50%; background: var(--text); cursor: pointer;
+   }
+
+   .vol-value { font-size: 11px; color: var(--text-dim); min-width: 34px; text-align: right; }
+
+   .check-row {
+     display: flex; align-items: center; gap: 8px;
+     font-size: 12px; color: var(--text-dim);
+     cursor: pointer; padding: 4px 0;
+   }
+   .check-row input[type=checkbox] {
+     accent-color: var(--green); width: 13px; height: 13px; cursor: pointer;
+   }
+
+   #joueurs-liste {
+     display: flex;
+     flex-direction: column;
+     gap: 6px;
+     flex: 1;
+     min-height: 0;
+     overflow-y: auto;
+     padding-right: 4px;
+   }
+
+   .empty-state {
+     text-align: center; padding: 40px 20px;
+     font-size: 13px; color: var(--text-dim); line-height: 1.8;
+   }
+
+   .joueur-card {
+     flex-shrink: 0;
+     background: var(--bg3); border: 1px solid var(--border);
+     border-radius: 4px; padding: 10px 14px;
+   }
+
+   .joueur-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+   .joueur-meta { flex: 1; min-width: 0; }
+   .joueur-nom {
+     font-size: 13px; font-weight: 600; color: var(--text-bright);
+   }
+
+   .joueur-vol-slider { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+   .joueur-vol-slider label { font-size: 10px; color: var(--text-dim); min-width: 42px; }
+   .joueur-vol-slider input[type=range] { flex: 1; }
+   .joueur-vol-slider .vol-value { font-size: 10px; min-width: 28px; }
+
+   .btn-mute {
+     padding: 3px 8px; background: transparent;
+     border: 1px solid var(--border2); border-radius: 3px;
+     color: var(--text-dim); font-family: 'Inter', sans-serif;
+     font-size: 11px; font-weight: 500; cursor: pointer;
+     transition: all 0.15s; flex-shrink: 0;
+   }
+   .btn-mute:hover { border-color: var(--red-dim); color: #c97070; }
+   .btn-mute.muted { border-color: var(--red-dim); color: #c97070; background: rgba(158,63,63,0.1); }
+
+   #log {
+     flex-shrink: 0;
+     font-size: 11px; color: var(--text-dim); letter-spacing: 0.3px;
+     margin-top: 10px; padding: 8px 10px;
+     background: var(--bg3); border: 1px solid var(--border);
+     border-radius: 4px; min-height: 28px;
+   }
+
+   #page-principale {
+     overflow: hidden;
+   }
+
+   #page-principale > main {
+     flex: 1;
+     min-height: 0;
+     max-width: 960px;
+     width: 100%;
+     margin: 0 auto;
+     padding: 28px 20px;
+     display: grid;
+     grid-template-columns: 280px 1fr;
+     gap: 20px;
+     height: calc(100vh - 75px);
+     overflow: hidden;
+   }
+
+   @media (max-width: 640px) {
+     #page-principale > main {
+       grid-template-columns: 1fr;
+       height: auto;
+       overflow: visible;
+     }
+   }
+
+   .left-col {
+     display: flex;
+     flex-direction: column;
+     gap: 20px;
+     min-height: 0;
+     overflow: hidden;
+   }
+
+   .right-col {
+     display: flex;
+     flex-direction: column;
+     min-height: 0;
+     overflow: hidden;
+   }
+
+   .right-col.panel {
+     display: flex;
+     flex-direction: column;
+     flex: 1;
+     min-height: 0;
+   }
+
+   .right-col .panel-body {
+     display: flex;
+     flex-direction: column;
+     flex: 1;
+     min-height: 0;
+     padding: 12px !important;
+     overflow: hidden;
+   }
+ </style>
 </head>
 <body>
-    <div class="login-overlay" id="loginOverlay">
-        <div class="login-box">
-            <h2>Connexion</h2>
-            <p>Entrez votre pseudo Roblox pour accéder au chat vocal externe.</p>
-            <input type="text" class="login-input" id="pseudoInput" placeholder="ENTREZ VOTRE PSEUDONYME EXACT" maxlength="50">
-            <button class="btn btn-login" onclick="validatePseudo()">Valider et Continuer</button>
-        </div>
-    </div>
 
-    <div class="header">
-        <div>
-            <h1>CHAT VOCAL EXTERNE</h1>
-            <div class="subtitle">SCP : SITE-731</div>
-        </div>
-        <div class="status">
-            <div class="status-dot" id="statusDot"></div>
-            <span id="statusText">Hors ligne</span>
-        </div>
-    </div>
+<header>
+ <div class="header-title">
+   <h1>Chat Vocal</h1>
+   <p>Système Audio</p>
+ </div>
+ <div class="header-status">
+   <div class="dot" id="dot-serveur"></div>
+   <span id="statut-txt">Hors ligne</span>
+ </div>
+</header>
 
-    <div class="main">
-        <div class="sidebar">
-            <div class="panel">
-                <div class="panel-title">Connexion</div>
-                <button class="btn btn-connect" id="btnConnect" onclick="connectVoice()">Se connecter au vocal</button>
-                <button class="btn btn-disconnect" id="btnDisconnect" onclick="disconnectVoice()" disabled>Se déconnecter du vocal</button>
-                <div class="player-card" id="playerCard">
-                    <div class="player-name" id="playerName">--</div>
-                    <div class="player-verified">Compte Roblox vérifié</div>
-                    <div class="player-status disconnected" id="playerStatus">Déconnecté</div>
-                </div>
-            </div>
-            <div class="panel">
-                <div class="panel-title">Contrôles Audio</div>
-                <div class="control-group">
-                    <div class="control-label">Microphone</div>
-                    <button class="btn btn-mic" id="btnMic" onclick="toggleMic()" disabled>Microphone désactivé</button>
-                </div>
-                <div class="control-group">
-                    <button class="btn btn-mic" onclick="testAudio()">Test</button>
-                </div>
-                <div class="control-group">
-                    <div class="control-label">Volume Général</div>
-                    <div class="slider-container">
-                        <input type="range" id="volumeSlider" min="0" max="100" value="100" onchange="updateVolume(this.value)">
-                        <span class="slider-value" id="volumeValue">100%</span>
-                    </div>
-                </div>
-                <div class="checkbox-container">
-                    <input type="checkbox" id="muteAll" onchange="toggleMuteAll()">
-                    <label for="muteAll">Muter tous les joueurs</label>
-                </div>
-            </div>
-        </div>
-        <div class="content">
-            <div class="content-header">Joueurs connectés : <span id="playerCount">0</span></div>
-            <div class="empty-state" id="emptyState">
-                <p>Aucune session active</p>
-                <span>En attente de connexion</span>
-            </div>
-            <div id="playersList"></div>
-        </div>
-    </div>
+<div id="page-connexion" class="page-section">
+ <div class="panel" style="width:100%; max-width:520px;">
+   <div class="panel-header"><span>Connexion</span></div>
+   <div class="panel-body">
+     <p style="margin-bottom:16px; color:var(--text-dim); font-size:13px; line-height:1.7;">
+       Entrez votre pseudo pour accéder au chat vocal.
+     </p>
+     <label class="audio-label" style="margin-bottom:6px;">Pseudo</label>
+     <input
+       type="text"
+       id="input-pseudo"
+       class="input-text"
+       placeholder="ENTRER VOTRE PSEUDONYME"
+       maxlength="30"
+       onkeydown="if(event.key==='Enter') verifierPseudo()"
+     >
+     <button class="btn" id="btn-verifier" onclick="verifierPseudo()">
+       <span id="btn-verifier-txt">VALIDER ET CONTINUER</span>
+     </button>
+   </div>
+ </div>
+</div>
 
-    <div class="footer-bar">Compte vérifié : <span id="footerPlayer">--</span></div>
-    <div class="system-footer">Système créé par Fluxium</div>
+<div id="page-principale" class="page-section hidden">
+ <main>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-        const socket = io();
-        const RTC_CONFIG = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
-        const remotePlayers = new Map();
-        let localStream = null;
-        let isConnected = false;
-        let isMicOn = false;
-        let username = '';
-        let onlinePlayers = [];
+   <div class="left-col">
 
-        function showNotification(message, type = 'success') {
-            const notif = document.createElement('div');
-            notif.className = 'notification ' + type;
-            notif.textContent = message;
-            document.body.appendChild(notif);
-            setTimeout(() => notif.remove(), 3000);
-        }
+     <div class="panel">
+       <div class="panel-header"><span>Connexion</span></div>
+       <div class="panel-body">
+         <button class="btn green" id="btn-rejoindre" disabled onclick="rejoindrVocal()">
+           Se connecter au vocal
+         </button>
+         <button class="btn amber" id="btn-quitter" disabled onclick="quitterVocal()">
+           Se déconnecter du vocal
+         </button>
+         <div class="auth-user" id="auth-user">
+           <div class="auth-user-info">
+             <div class="auth-user-name" id="auth-nom">—</div>
+             <div class="auth-user-sub">Connecté</div>
+           </div>
+         </div>
+       </div>
+     </div>
 
-        function createPeerConnection(targetUsername) {
-            if (remotePlayers.has(targetUsername)) return remotePlayers.get(targetUsername);
-            const pc = new RTCPeerConnection(RTC_CONFIG);
-            const audioEl = new Audio();
-            audioEl.autoplay = true;
-            const entry = { pc, audioEl, audioCtx: null, gainNode: null };
-            if (localStream) localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-            pc.onicecandidate = e => { if (e.candidate) socket.emit('webrtc:signal', { target: targetUsername, candidate: e.candidate }); };
-            pc.ontrack = e => {
-                audioEl.srcObject = e.streams[0];
-                audioEl.play().catch(() => {});
-                if (!entry.audioCtx) {
-                    entry.audioCtx = new AudioContext();
-                    entry.gainNode = entry.audioCtx.createGain();
-                    entry.gainNode.connect(entry.audioCtx.destination);
-                    const src = entry.audioCtx.createMediaStreamSource(e.streams[0]);
-                    src.connect(entry.gainNode);
-                }
-            };
-            remotePlayers.set(targetUsername, entry);
-            return entry;
-        }
+     <div class="panel">
+       <div class="panel-header"><span>Contrôles Audio</span></div>
+       <div class="panel-body">
+         <span class="audio-label">Microphone</span>
+         <button class="btn amber" id="micro-btn" disabled onclick="toggleMicro()">
+           Microphone désactivé
+         </button>
+         <div style="margin-top:16px">
+           <span class="audio-label">Volume général</span>
+           <div class="master-vol">
+             <label>Sortie</label>
+             <input type="range" id="master-vol" min="0" max="100" value="100"
+                    oninput="setMasterVol(this.value)">
+             <span class="vol-value" id="master-vol-val">100%</span>
+           </div>
+         </div>
+         <label class="check-row">
+           <input type="checkbox" id="mute-all" onchange="muteAll(this.checked)">
+           Muter tous les joueurs
+         </label>
+       </div>
+     </div>
 
-        function establishConnections() {
-            onlinePlayers.filter(p => p.username !== username && p.source === 'game').forEach(p => {
-                const pc = createPeerConnection(p.username);
-                pc.pc.createOffer().then(offer => {
-                    return pc.pc.setLocalDescription(offer);
-                }).then(() => {
-                    socket.emit('webrtc:offer', { target: p.username, offer: pc.pc.localDescription });
-                });
-            });
-        }
+   </div>
 
-        function validatePseudo() {
-            const input = document.getElementById('pseudoInput');
-            username = input.value.trim();
-            if (!username) { alert('Veuillez entrer votre pseudo Roblox'); return; }
-            document.getElementById('loginOverlay').classList.add('hidden');
-            document.getElementById('playerName').textContent = username;
-            document.getElementById('playerCard').classList.add('visible');
-            document.getElementById('footerPlayer').textContent = username;
-            socket.emit('register', { username: username });
-            socket.on('registered', (data) => {
-                if (data.ok) { showNotification('Bienvenue ' + username + ' !'); }
-                else { showNotification(data.error || 'Erreur', 'error'); }
-            });
-        }
+   <div class="panel right-col">
+     <div class="panel-header">
+       <span id="header-joueurs">Joueurs connectés : 0</span>
+     </div>
+     <div class="panel-body">
+       <div id="joueurs-liste">
+         <div class="empty-state">Aucune session active<br>En attente de connexion</div>
+       </div>
+       <div id="log">Système prêt</div>
+     </div>
+   </div>
 
-        function connectVoice() {
-            if (isConnected || !username) { if (!username) showNotification('Entrez votre pseudo d\'abord', 'error'); return; }
-            const inGame = onlinePlayers.find(p => p.username === username && p.source === 'game');
-            if (!inGame) { showNotification('Vous devez être connecté en jeu !', 'error'); return; }
-            navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-                localStream = stream;
-                isConnected = true;
-                socket.emit('voice:connect', { username: username });
-                startAudioCapture();
-            }).catch(err => { showNotification('Erreur microphone: ' + err.message, 'error'); });
-        }
+ </main>
+</div>
 
-        let mediaRecorder;
-        let audioChunks = [];
+<footer style="
+ position: fixed; bottom: 12px; left: 16px;
+ font-size: 10px; color: var(--text-dim); letter-spacing: 0.5px;
+">Système de chat vocal</footer>
 
-        function startAudioCapture() {
-            if (!localStream) return;
-            mediaRecorder = new MediaRecorder(localStream, { mimeType: 'audio/webm' });
-            audioChunks = [];
+<script src="/socket.io.js"></script>
+<script>
+let monNom         = null;
+let socket         = null;
+let streamLocal    = null;
+let audioCtx       = null;
+let masterGainNode = null;
+let microActif     = false;
+let dansLeVocal    = false;
+let iceServers     = [{ urls: 'stun:stun.l.google.com:19302' }];
 
-            mediaRecorder.ondataavailable = (e) => {
-                if (e.data.size > 0) {
-                    audioChunks.push(e.data);
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                        const base64Audio = reader.result.split(',')[1];
-                        onlinePlayers.filter(p => p.username !== username && p.source === 'game').forEach(p => {
-                            socket.emit('audio:data', { audioBuffer: base64Audio, target: p.username });
-                        });
-                    };
-                    reader.readAsDataURL(audioBlob);
-                    audioChunks = [];
-                }
-            };
+const peerConnections = {};
+const audioElements   = {};
+const audioSources    = {};
+const mutesLocaux     = {};
+const volsLocaux      = {};
+let dernierPeersConnus = [];
+const senders = {};
+let volMaster = 1;
 
-            mediaRecorder.start(100);
-        }
+async function verifierPseudo() {
+ const input = document.getElementById('input-pseudo');
+ const nom   = input.value.trim();
+ if (!nom) return;
 
-        function disconnectVoice() {
-            if (!isConnected) return;
-            if (mediaRecorder) { mediaRecorder.stop(); mediaRecorder = null; }
-            if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
-            isConnected = false;
-            isMicOn = false;
-            socket.emit('voice:disconnect', { username: username });
-        }
+ const btn = document.getElementById('btn-verifier');
+ const txt = document.getElementById('btn-verifier-txt');
+ btn.disabled = true;
+ txt.textContent = 'Vérification…';
 
-        function toggleMic() {
-            if (!localStream || !isConnected) return;
-            isMicOn = !isMicOn;
-            localStream.getAudioTracks().forEach(t => t.enabled = isMicOn);
-            socket.emit('voice:talking', { username: username, isTalking: isMicOn });
-            document.getElementById('btnMic').textContent = isMicOn ? 'Microphone activé' : 'Microphone désactivé';
-            document.getElementById('btnMic').classList.toggle('active', isMicOn);
-        }
+ try {
+   const res  = await fetch('/verifier-pseudo', {
+     method: 'POST',
+     headers: { 'Content-Type': 'application/json' },
+     body: JSON.stringify({ nom })
+   });
+   const data = await res.json();
 
-        function updateVolume(val) { document.getElementById('volumeValue').textContent = val + '%'; }
-        function toggleMuteAll() {}
-        function testAudio() {
-            if (localStream) {
-                const ctx = new AudioContext();
-                const src = ctx.createMediaStreamSource(localStream);
-                src.connect(ctx.destination);
-                setTimeout(() => { src.disconnect(); ctx.close(); }, 2000);
-            } else { showNotification('Connectez-vous d\'abord au vocal', 'error'); }
-        }
+   if (!data.ok) {
+     log('Erreur : ' + data.erreur);
+     btn.disabled = false;
+     txt.textContent = 'VALIDER ET CONTINUER';
+     return;
+   }
 
-        function updatePlayersList() {
-            const list = document.getElementById('playersList');
-            const empty = document.getElementById('emptyState');
-            document.getElementById('playerCount').textContent = onlinePlayers.length;
-            if (onlinePlayers.length === 0) { empty.style.display = 'flex'; list.innerHTML = ''; return; }
-            empty.style.display = 'none';
-            list.innerHTML = onlinePlayers.map(p => `
-                <div class="player-item ${p.isTalking ? 'speaking' : ''}">
-                    <div class="player-info">
-                        <span class="player-item-name">${p.isTalking ? '🔊 ' : ''}${p.username}</span>
-                        <div class="speaking-bars" style="display:${p.isTalking ? 'flex' : 'none'}">
-                            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
-                        </div>
-                    </div>
-                    <span class="player-item-status ${p.isTalking ? 'talking' : ''}">${p.isTalking ? 'Parle' : 'En ligne'}</span>
-                </div>
-            `).join('');
-        }
+   monNom = data.nomExact || nom;
 
-        socket.on('connected', (data) => {
-            if (!data.ok) { showNotification(data.error || 'Vous devez être connecté en jeu', 'error'); return; }
-            document.getElementById('statusDot').classList.add('online');
-            document.getElementById('statusText').textContent = 'En ligne';
-            document.getElementById('btnConnect').disabled = true;
-            document.getElementById('btnDisconnect').disabled = false;
-            document.getElementById('btnMic').disabled = false;
-            document.getElementById('playerStatus').textContent = 'Connecté';
-            document.getElementById('playerStatus').className = 'player-status connected';
-            showNotification(data.message || 'Connecté au vocal');
-        });
+   document.getElementById('page-connexion').classList.add('hidden');
+   document.getElementById('page-principale').classList.remove('hidden');
 
-        socket.on('players:all', (players) => {
-            onlinePlayers = players;
-            updatePlayersList();
-            const inGame = players.find(p => p.username === username && p.source === 'game');
-            const btn = document.getElementById('btnConnect');
-            const status = document.getElementById('playerStatus');
-            if (inGame) {
-                btn.disabled = false;
-                btn.style.opacity = '1';
-                if (!isConnected) { status.textContent = 'En jeu - Prêt à se connecter'; status.className = 'player-status connected'; }
-            } else if (!isConnected) {
-                btn.disabled = true;
-                btn.style.opacity = '0.5';
-                if (!isConnected) { status.textContent = 'Hors ligne - Rejoignez un serveur'; status.className = 'player-status disconnected'; }
-            }
-        });
+   const authDiv = document.getElementById('auth-user');
+   authDiv.style.display = 'flex';
+   document.getElementById('auth-nom').textContent = monNom;
 
-        socket.on('webrtc:offer', async (data) => {
-            const pc = createPeerConnection(data.from);
-            await pc.pc.setRemoteDescription(data.offer);
-            const answer = await pc.pc.createAnswer();
-            await pc.pc.setLocalDescription(answer);
-            socket.emit('webrtc:answer', { target: data.from, answer });
-        });
+   document.getElementById('btn-rejoindre').disabled = false;
+   log('Compte vérifié : ' + monNom);
 
-        socket.on('webrtc:answer', async (data) => {
-            const entry = remotePlayers.get(data.from);
-            if (entry) await entry.pc.setRemoteDescription(data.answer);
-        });
+   connecterServeur();
 
-        socket.on('webrtc:signal', async (data) => {
-            const entry = remotePlayers.get(data.from);
-            if (entry) await entry.pc.addIceCandidate(data.candidate);
-        });
+ } catch (e) {
+   log('Erreur réseau : ' + e.message);
+   btn.disabled = false;
+   txt.textContent = 'VALIDER ET CONTINUER';
+ }
+}
 
-        socket.on('nearby', (players) => {
-            players.forEach(p => {
-                const entry = remotePlayers.get(p.username);
-                if (entry && entry.gainNode) {
-                    const vol = isMicOn || true ? (p.volume / 100) * (document.getElementById('volumeSlider').value / 100) : 0;
-                    entry.gainNode.gain.value = vol;
-                }
-            });
-        });
+async function chargerIceServers() {
+ try {
+   const res  = await fetch('/turn-credentials');
+   const data = await res.json();
+   if (data.iceServers && data.iceServers.length) {
+     iceServers = data.iceServers;
+   }
+ } catch (e) {
+   console.warn('[ICE] Erreur:', e.message);
+ }
+}
 
-        socket.on('audio:processed', async (data) => {
-            const { from, audioData } = data;
-            const audioBlob = new Blob([Uint8Array.from(atob(audioData), c => c.charCodeAt(0))], { type: 'audio/opus' });
-            const audioUrl = URL.createObjectURL(audioBlob);
-            const audio = new Audio(audioUrl);
-            audio.play().catch(err => console.error('Playback error:', err));
-        });
+async function rejoindrVocal() {
+ if (!monNom) return;
 
-        socket.on('disconnect', () => {
-            isConnected = false;
-            onlinePlayers = [];
-            updatePlayersList();
-            document.getElementById('statusDot').classList.remove('online');
-            document.getElementById('statusText').textContent = 'Hors ligne';
-            document.getElementById('btnConnect').disabled = false;
-            document.getElementById('btnDisconnect').disabled = true;
-            document.getElementById('btnMic').disabled = true;
-            document.getElementById('playerStatus').textContent = 'Déconnecté';
-            document.getElementById('playerStatus').className = 'player-status disconnected';
-        });
-    </script>
+ await chargerIceServers();
+
+ const CtxAudio = window.AudioContext || window.webkitAudioContext;
+ audioCtx = new CtxAudio();
+ masterGainNode = audioCtx.createGain();
+ masterGainNode.gain.value = 1;
+ masterGainNode.connect(audioCtx.destination);
+
+ try {
+   streamLocal = await navigator.mediaDevices.getUserMedia({
+     audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+     video: false
+   });
+   streamLocal.getAudioTracks().forEach(t => t.enabled = false);
+   log('Micro prêt');
+ } catch (e) {
+   log('Micro inaccessible : ' + e.message);
+   return;
+ }
+
+ dansLeVocal = true;
+ document.getElementById('btn-rejoindre').disabled = true;
+ document.getElementById('btn-quitter').disabled   = false;
+ document.getElementById('micro-btn').disabled     = false;
+
+ connecterServeur();
+}
+
+function quitterVocal() {
+ dansLeVocal = false;
+ Object.keys(peerConnections).forEach(fermerPeer);
+
+ if (streamLocal) {
+   streamLocal.getTracks().forEach(t => t.stop());
+   streamLocal = null;
+ }
+
+ if (audioCtx) {
+   audioCtx.close();
+   audioCtx = null;
+   masterGainNode = null;
+ }
+
+ if (socket) {
+   socket.disconnect();
+   socket = null;
+ }
+
+ document.getElementById('btn-rejoindre').disabled = false;
+ document.getElementById('btn-quitter').disabled   = true;
+ document.getElementById('micro-btn').disabled     = true;
+ document.getElementById('micro-btn').textContent  = 'Microphone désactivé';
+ document.getElementById('micro-btn').className    = 'btn amber';
+ microActif = false;
+
+ setStatut('offline');
+ log('Déconnecté du vocal');
+ document.getElementById('joueurs-liste').innerHTML =
+   '<div class="empty-state">Session terminée</div>';
+ mettreAJourCompteur();
+}
+
+document.addEventListener('visibilitychange', () => {
+ if (!audioCtx) return;
+ if (audioCtx.state === 'suspended') {
+   audioCtx.resume();
+ }
+});
+
+function toggleMicro() {
+ if (!streamLocal) return;
+ microActif = !microActif;
+ streamLocal.getAudioTracks().forEach(t => t.enabled = microActif);
+ const btn = document.getElementById('micro-btn');
+ btn.textContent = microActif ? 'Microphone actif' : 'Microphone désactivé';
+ btn.className   = microActif ? 'btn green' : 'btn amber';
+}
+
+function setMasterVol(v) {
+ document.getElementById('master-vol-val').textContent = v + '%';
+ volMaster = v / 100;
+ if (masterGainNode) masterGainNode.gain.value = volMaster;
+ appliquerTousLesVolumes();
+}
+
+function muteAll(muted) {
+ for (const nom in audioElements) appliquerVolumeJoueur(nom);
+ log(muted ? 'Tous les joueurs mutés' : 'Son restauré');
+}
+
+function toggleMuteJoueur(nom) {
+ mutesLocaux[nom] = !mutesLocaux[nom];
+ appliquerVolumeJoueur(nom);
+ const btn  = document.getElementById('mute-' + nom);
+ const card = document.getElementById('card-' + nom);
+ if (btn)  { btn.textContent = mutesLocaux[nom] ? 'Unmute' : 'Mute'; btn.classList.toggle('muted', mutesLocaux[nom]); }
+ if (card) card.classList.toggle('muted', mutesLocaux[nom]);
+}
+
+function setVolJoueur(nom, v) {
+ volsLocaux[nom] = Number(v);
+ const el = document.getElementById('volval-' + nom);
+ if (el) el.textContent = v + '%';
+ appliquerVolumeJoueur(nom);
+}
+
+function appliquerVolumeJoueur(nom) {
+ const audio = audioElements[nom];
+ if (!audio) return;
+ const muted      = mutesLocaux[nom] || document.getElementById('mute-all')?.checked;
+ const volLocal   = (volsLocaux[nom] ?? 100) / 100;
+ const vol = muted ? 0 : volLocal * volMaster;
+ if (audioSources[nom]) {
+   audioSources[nom].gain.gain.value = vol;
+ }
+}
+
+function appliquerTousLesVolumes() {
+ for (const nom in audioElements) appliquerVolumeJoueur(nom);
+}
+
+function connecterServeur() {
+ socket = io();
+
+ socket.on('connect', () => {
+   setStatut('online');
+   socket.emit('rejoindre', { nom: monNom });
+   log('Connecté');
+ });
+
+ socket.on('joueur-valide', () => {
+   log('Validé — vocal actif');
+ });
+
+ socket.on('disconnect', () => setStatut('offline'));
+
+ socket.on('peers-actifs', (nomsActifs) => {
+   if (!Array.isArray(nomsActifs)) return;
+   dernierPeersConnus = nomsActifs.slice();
+   console.log('[PEERS] liste serveur :', nomsActifs.join(', ') || '(vide)');
+
+   for (const nom in peerConnections) {
+     if (!nomsActifs.includes(nom)) fermerPeer(nom);
+   }
+   for (const nom of nomsActifs) {
+     if (!peerConnections[nom] && nom !== monNom) {
+       if (monNom < nom) creerPeer(nom, true);
+     }
+   }
+ });
+
+ socket.on('signal', ({ de, signal }) => traiterSignal(de, signal));
+
+ socket.on('joueur-parti', ({ nom }) => {
+   log(nom + ' est parti');
+   fermerPeer(nom);
+   dernierPeersConnus = dernierPeersConnus.filter(n => n !== nom);
+   const card = document.getElementById('card-' + nom);
+   if (card) card.remove();
+   mettreAJourCompteur();
+ });
+
+ socket.on('force-deconnexion', ({ raison }) => {
+   alert('Déconnecté du vocal : ' + raison);
+   quitterVocal();
+ });
+
+ socket.on('players:all', (players) => {
+   const gamePlayers = players.filter(p => p.source === 'game');
+   log('Joueurs en jeu : ' + gamePlayers.map(p => p.username).join(', ') || 'Aucun');
+ });
+}
+
+function creerPeer(nomJoueur, initiateur) {
+ if (peerConnections[nomJoueur]) return;
+
+ const pc = new RTCPeerConnection({ iceServers });
+ peerConnections[nomJoueur] = pc;
+
+ pc.oniceconnectionstatechange = () => {
+   console.log(`[ICE] ${nomJoueur} : ${pc.iceConnectionState}`);
+ };
+
+ if (streamLocal) {
+   const piste = streamLocal.getAudioTracks()[0];
+   if (piste) senders[nomJoueur] = pc.addTrack(piste, streamLocal);
+ }
+
+ pc.ontrack = (event) => {
+   if (!audioElements[nomJoueur]) {
+     const audio = new Audio();
+     audio.autoplay = true;
+     audio.muted = true;
+     document.body.appendChild(audio);
+     audioElements[nomJoueur] = audio;
+     volsLocaux[nomJoueur]  = 100;
+     mutesLocaux[nomJoueur] = false;
+   }
+
+   const audioEl = audioElements[nomJoueur];
+   audioEl.srcObject = event.streams[0];
+   const lecture = audioEl.play();
+   if (lecture && lecture.catch) lecture.catch(() => {});
+
+   if (audioSources[nomJoueur]) {
+     try { audioSources[nomJoueur].source.disconnect(); audioSources[nomJoueur].gain.disconnect(); } catch (e) {}
+   }
+   if (audioCtx) {
+     const source = audioCtx.createMediaStreamSource(event.streams[0]);
+     const gain   = audioCtx.createGain();
+     gain.gain.value = 1;
+     source.connect(gain);
+     gain.connect(audioCtx.destination);
+     audioSources[nomJoueur] = { source, gain };
+   }
+   appliquerVolumeJoueur(nomJoueur);
+   log('Audio reçu de ' + nomJoueur);
+   ajouterJoueurInterface(nomJoueur);
+ };
+
+ pc.onicecandidate = (e) => {
+   if (e.candidate) {
+     socket.emit('signal', {
+       pour: nomJoueur, de: monNom,
+       signal: { type: 'ice', candidate: e.candidate }
+     });
+   }
+ };
+
+ if (initiateur) {
+   pc.createOffer()
+     .then(offer => {
+       pc.setLocalDescription(offer);
+       socket.emit('signal', {
+         pour: nomJoueur, de: monNom,
+         signal: { type: 'offer', sdp: offer }
+       });
+     })
+     .catch(e => console.error('[WebRTC] createOffer :', e));
+ }
+}
+
+async function traiterSignal(de, signal) {
+ if (!peerConnections[de]) creerPeer(de, false);
+ const pc = peerConnections[de];
+ try {
+   if (signal.type === 'offer') {
+     await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+     const answer = await pc.createAnswer();
+     await pc.setLocalDescription(answer);
+     socket.emit('signal', {
+       pour: de, de: monNom,
+       signal: { type: 'answer', sdp: answer }
+     });
+   } else if (signal.type === 'answer') {
+     await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+   } else if (signal.type === 'ice') {
+     await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+   }
+ } catch (e) {
+   console.error('[WebRTC] traiterSignal :', e);
+ }
+}
+
+function fermerPeer(nom) {
+ if (peerConnections[nom]) {
+   try {
+     peerConnections[nom].oniceconnectionstatechange = null;
+     peerConnections[nom].close();
+   } catch (e) {}
+   delete peerConnections[nom];
+ }
+ delete senders[nom];
+ if (audioElements[nom]) {
+   try { audioElements[nom].srcObject = null; } catch (e) {}
+   audioElements[nom].remove();
+   delete audioElements[nom];
+ }
+ if (audioSources[nom]) {
+   try { audioSources[nom].source.disconnect(); audioSources[nom].gain.disconnect(); } catch (e) {}
+   delete audioSources[nom];
+ }
+}
+
+function ajouterJoueurInterface(nom) {
+ const liste = document.getElementById('joueurs-liste');
+ if (document.getElementById('card-' + nom)) return;
+
+ const card = document.createElement('div');
+ card.className = 'joueur-card';
+ card.id = 'card-' + nom;
+ card.innerHTML = `
+   <div class="joueur-top">
+     <div class="joueur-meta">
+       <div class="joueur-nom">${nom}</div>
+     </div>
+     <button class="btn-mute" id="mute-${nom}" onclick="toggleMuteJoueur('${nom}')">Mute</button>
+   </div>
+   <div class="joueur-vol-slider">
+     <label>Volume</label>
+     <input type="range" min="0" max="200" value="100"
+            oninput="setVolJoueur('${nom}', this.value)">
+     <span class="vol-value" id="volval-${nom}">100%</span>
+   </div>
+ `;
+ liste.appendChild(card);
+ mettreAJourCompteur();
+}
+
+function mettreAJourCompteur() {
+ const nb = document.querySelectorAll('.joueur-card').length;
+ document.getElementById('header-joueurs').textContent = 'Joueurs connectés : ' + nb;
+}
+
+function setStatut(etat) {
+ document.getElementById('dot-serveur').className   = 'dot ' + (etat === 'online' ? 'green' : 'red');
+ document.getElementById('statut-txt').textContent  = etat === 'online' ? 'En ligne' : 'Hors ligne';
+}
+
+function log(msg) {
+ document.getElementById('log').textContent = msg;
+}
+</script>
 </body>
 </html>
