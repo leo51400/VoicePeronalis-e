@@ -134,6 +134,7 @@ io.on('connection', (socket) => {
     console.log('[JOUEUR] Connecté:', nom);
     socket.emit('joueur-valide');
     broadcastAllPlayers();
+    envoyerListePeers();
   });
 
   socket.on('signal', ({ pour, de, signal }) => {
