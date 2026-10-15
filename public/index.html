@@ -432,8 +432,6 @@ async function verifierPseudo() {
    document.getElementById('btn-rejoindre').disabled = false;
    log('Compte vérifié : ' + monNom);
 
-   connecterServeur();
-
  } catch (e) {
    log('Erreur réseau : ' + e.message);
    btn.disabled = false;

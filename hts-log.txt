@@ -1,0 +1,12 @@
+HTTrack3.49-2+htsswf+htsjava launched on Wed, 14 Oct 2026 20:33:38 at https://voicechat-d5if.onrender.com/ +*.png +*.gif +*.jpg +*.jpeg +*.css +*.js -ad.doubleclick.net/* -mime:application/foobar
+(winhttrack -qwC2%Ps2u1%s%uN0%I0p3DaK0H0%kf2A25000%f#f -F "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36" -%F "<!-- Mirrored from %s%s by HTTrack Website Copier/3.x [XR&CO'2014], %s -->" -%l "en, *" https://voicechat-d5if.onrender.com/ -O1 "C:\My Web Sites\WEB" +*.png +*.gif +*.jpg +*.jpeg +*.css +*.js -ad.doubleclick.net/* -mime:application/foobar )
+
+Information, Warnings and Errors reported for this mirror:
+note:	the hts-log.txt file, and hts-cache folder, may contain sensitive information,
+	such as username/password authentication for websites mirrored in this project
+	do not share these files/folders if you want these information to remain private
+
+20:33:40	Error: 	"Unauthorized" (401) at link https://pub-141831e61e69445289222976a15b6fb3.r2.dev/Image_to_url_V2/IMG-MSA-imagetourl.cloud-1773350649030-71ip2m.png (from https://voicechat-d5if.onrender.com/)
+
+HTTrack Website Copier/3.49-2 mirror complete in 2 seconds : 4 links scanned, 2 files written (198656 bytes overall) [68059 bytes received at 34029 bytes/sec], 198792 bytes transferred using HTTP compression in 3 files, ratio 24%, 1.3 requests per connection
+(1 errors, 0 warnings, 0 messages)
