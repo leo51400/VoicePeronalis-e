@@ -729,7 +729,11 @@ async function traiterSignal(de, signal) {
    } else if (signal.type === 'answer') {
      await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
    } else if (signal.type === 'ice') {
-     await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+     if (pc.remoteDescription) {
+       await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+     } else {
+       console.warn('[WebRTC] ICE reçu avant description distante, ignoré');
+     }
    }
  } catch (e) {
    console.error('[WebRTC] traiterSignal :', e);
