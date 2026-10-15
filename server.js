@@ -63,8 +63,10 @@ function broadcastAllPlayers() {
 // Routes API Roblox
 app.post('/api/update', (req, res) => {
   const { userId, username, position, isTalking } = req.body;
+  console.log('[API] /api/update reçu:', { userId, username, position, isTalking });
   if (!userId || !position) return res.status(400).json({ error: 'Missing' });
   gamePlayers.set(userId, { userId, username, position, isTalking: !!isTalking, lastUpdate: Date.now() });
+  console.log('[API] Joueurs en jeu:', Array.from(gamePlayers.keys()));
   broadcastProximity();
   broadcastAllPlayers();
   res.json({ ok: true });
@@ -72,12 +74,14 @@ app.post('/api/update', (req, res) => {
 
 app.post('/api/talking', (req, res) => {
   const { userId, isTalking } = req.body;
+  console.log('[API] /api/talking reçu:', { userId, isTalking });
   const p = gamePlayers.get(userId);
   if (p) { p.isTalking = isTalking; broadcastProximity(); broadcastAllPlayers(); }
   res.json({ ok: true });
 });
 
 app.post('/api/leave', (req, res) => {
+  console.log('[API] /api/leave reçu:', req.body.userId);
   gamePlayers.delete(req.body.userId);
   broadcastAllPlayers();
   res.json({ ok: true });
